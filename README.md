@@ -1,0 +1,2 @@
+# plugseal
+PlugSeal WordPress Plugin
