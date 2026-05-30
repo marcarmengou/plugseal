@@ -37,4 +37,4 @@ This plugin intercepts official WordPress APIs by identifying the calling plugin
 
 ## Resources
 
-* WordPress Plugin Repository: [https://wordpress.org/plugins/security-hardener/](https://wordpress.org/plugins/plugseal/)
+* WordPress Plugin Repository: [https://wordpress.org/plugins/plugseal/](https://wordpress.org/plugins/plugseal/)
