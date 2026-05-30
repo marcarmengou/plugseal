@@ -1,0 +1,187 @@
+/* PlugSeal — admin styles */
+
+.plugseal-wrap { max-width: 1100px; }
+.plugseal-wrap > .description { color: #646970; margin-bottom: 20px; }
+
+/* Two-column layout */
+.plugseal-layout {
+	display: flex;
+	gap: 20px;
+	align-items: flex-start;
+}
+
+/* Plugin list (left column) */
+.plugseal-plugin-list {
+	width: 220px;
+	flex-shrink: 0;
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
+}
+
+.plugseal-plugin-item {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 10px 12px;
+	border: none;
+	border-bottom: 1px solid #f0f0f1;
+	background: #fff;
+	cursor: pointer;
+	text-align: left;
+	width: 100%;
+	transition: background 0.1s;
+}
+
+.plugseal-plugin-item:last-child { border-bottom: none; }
+.plugseal-plugin-item:hover,
+.plugseal-plugin-item.is-selected { background: #f0f6fc; }
+.plugseal-plugin-item:focus-visible { outline: 2px solid #2271b1; outline-offset: -2px; }
+
+.plugseal-plugin-name {
+	font-size: 13px;
+	font-weight: 500;
+	color: #3c434a;
+	word-break: break-all;
+}
+
+/* Badges */
+.plugseal-badge {
+	font-size: 11px;
+	padding: 2px 7px;
+	border-radius: 10px;
+	font-weight: 600;
+	flex-shrink: 0;
+	margin-left: 8px;
+}
+
+.badge-restricted { background: #fff3cd; color: #856404; }
+
+/* Permissions panel (right column) */
+.plugseal-permissions-panel {
+	flex: 1;
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+	padding: 20px;
+	min-height: 160px;
+	background: #fff;
+}
+
+.plugseal-select-hint {
+	color: #646970;
+	font-style: italic;
+	margin: 0;
+}
+
+.plugseal-plugin-detail h2 { margin-top: 0; font-size: 16px; }
+
+/* Permissions table */
+.plugseal-perms-table { font-size: 13px; table-layout: fixed; width: 100%; }
+.plugseal-perms-table th { font-weight: 600; color: #3c434a; background: #f6f7f7; }
+.plugseal-perms-table th:first-child { width: auto; }
+.plugseal-perms-table th:last-child { width: 120px; text-align: center; }
+.plugseal-perms-table td:last-child { text-align: center; vertical-align: middle; }
+.plugseal-perms-table tr:hover td { background: #f9f9f9; }
+
+/* Toggle button */
+.plugseal-toggle {
+	padding: 4px 14px;
+	border-radius: 3px;
+	border: 1px solid;
+	font-size: 12px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: background 0.1s, color 0.1s;
+	min-width: 80px;
+}
+
+.plugseal-toggle.is-allowed {
+	background: #edfaef;
+	border-color: #1a7f37;
+	color: #1a7f37;
+}
+
+.plugseal-toggle.is-allowed:hover {
+	background: #d4f5da;
+}
+
+.plugseal-toggle.is-denied {
+	background: #fcf0f1;
+	border-color: #cc1818;
+	color: #cc1818;
+}
+
+.plugseal-toggle.is-denied:hover {
+	background: #f8d7d7;
+}
+
+.plugseal-toggle:focus-visible {
+	outline: 2px solid #2271b1;
+	outline-offset: 2px;
+}
+
+/* Data section */
+.plugseal-data-section {
+	margin-top: 32px;
+	max-width: 800px;
+}
+
+.plugseal-data-section h2 {
+	font-size: 15px;
+	margin-top: 0;
+}
+
+.plugseal-data-section .description {
+	margin-top: 6px;
+	margin-left: 24px;
+	color: #646970;
+}
+
+.plugseal-data-section .button {
+	margin-top: 12px;
+}
+
+/* RTL support */
+.rtl .plugseal-plugin-item  { text-align: right; }
+.rtl .plugseal-badge        { margin-left: 0; margin-right: 8px; }
+.rtl .plugseal-notice-warn  { border-left: none; border-right: 4px solid #ffca2c; }
+
+/* Permission groups */
+.plugseal-group-label {
+	font-size: 12px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: #646970;
+	margin: 20px 0 6px;
+	padding-bottom: 4px;
+	border-bottom: 1px solid #f0f0f1;
+}
+
+.plugseal-plugin-detail .plugseal-group-label:first-of-type {
+	margin-top: 0;
+}
+
+/* Hooks hint tooltip */
+.plugseal-hooks-hint {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 16px;
+	height: 16px;
+	border-radius: 50%;
+	background: #c3c4c7;
+	color: #fff;
+	font-size: 10px;
+	font-weight: 700;
+	cursor: help;
+	margin-left: 6px;
+	vertical-align: middle;
+	line-height: 1;
+}
+
+.plugseal-hooks-hint:hover {
+	background: #2271b1;
+}
