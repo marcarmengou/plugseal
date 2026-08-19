@@ -2,8 +2,8 @@
 /**
  * Additional API interceptors for PlugSeal.
  *
- * Covers: Options, Metadata, Email, Cron, Transients,
- *         Users, REST, Shortcodes, Rewrite, Settings, Dashboard, Admin menu.
+ * Covers: Options, Email, Cron, Transients,
+ *         Users, REST, Shortcodes, Rewrite, Dashboard, Admin menu.
  *
  * @package PlugSeal
  */
@@ -24,60 +24,10 @@ defined( 'ABSPATH' ) || exit;
 final class PlugSeal_Interceptor_Options {
 
 	public function __construct() {
-		// pre_option fires before cache — good for cold cache.
 		add_filter( 'pre_option',        [ $this, 'check_read' ],  PHP_INT_MIN, 3 );
-		// option_{name} fires after retrieval, even from cache.
-		// We hook into 'all' to catch any option name dynamically,
-		// but exit immediately if not an option_ filter to minimise overhead.
-		add_filter( 'all',               [ $this, 'check_read_cached' ], PHP_INT_MIN );
 		add_filter( 'pre_update_option', [ $this, 'check_write' ], PHP_INT_MIN, 3 );
 		add_action( 'add_option',        [ $this, 'check_add' ],   PHP_INT_MIN, 1 );
 		add_action( 'delete_option',     [ $this, 'check_delete' ], PHP_INT_MIN, 1 );
-	}
-
-	/**
-	 * Intercepts option_{name} filters which fire even from cache.
-	 * Uses 'all' filter but exits immediately if not an option_ hook.
-	 * Registers a one-time filter for the specific option to intercept the value.
-	 */
-	public function check_read_cached(): void {
-		$tag = current_filter();
-
-		if ( ! str_starts_with( $tag, 'option_' ) ) {
-			return;
-		}
-
-		$name = substr( $tag, 7 );
-
-		if (
-			str_starts_with( $name, '_transient' ) ||
-			str_starts_with( $name, '_site_transient' ) ||
-			$name === 'cron' ||
-			$name === 'active_plugins'
-		) {
-			return;
-		}
-
-		$slug = PlugSeal_Interceptor_Helper::get_calling_plugin_slug();
-
-		if ( null === $slug || PlugSeal_Permission_Registry::can( $slug, 'options:read' ) ) {
-			return;
-		}
-
-		// Register a one-time filter for this specific option.
-		if ( ! has_filter( $tag, [ $this, 'block_option_value' ] ) ) {
-			add_filter( $tag, [ $this, 'block_option_value' ], PHP_INT_MIN );
-		}
-	}
-
-	/**
-	 * Returns null to block the option value.
-	 *
-	 * @param mixed $value Option value.
-	 * @return null
-	 */
-	public function block_option_value( mixed $value ): mixed {
-		return null;
 	}
 
 	/**
@@ -607,7 +557,6 @@ final class PlugSeal_Interceptor_Admin_Menu {
 					foreach ( $items as $position => $item ) {
 						if ( empty( $item[2] ) ) continue;
 						// item[2] is the page slug — check against registered page callbacks.
-						global $pagenow, $_registered_pages;
 						$hookname = get_plugin_page_hookname( $item[2], $parent_slug );
 						if ( ! isset( $GLOBALS['wp_filter'][ $hookname ] ) ) continue;
 						foreach ( $GLOBALS['wp_filter'][ $hookname ]->callbacks as $priority => $callbacks ) {
@@ -639,8 +588,12 @@ final class PlugSeal_Interceptor_Helper {
 	 * @return string|null Plugin slug, or null if call originates from core.
 	 */
 	public static function get_calling_plugin_slug(): ?string {
-		$trace       = debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS, 40 ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_debug_backtrace
-		$plugins_dir = wp_normalize_path( WP_PLUGIN_DIR );
+		$trace = debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS, 40 ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_debug_backtrace
+
+		static $plugins_dir = null;
+		if ( null === $plugins_dir ) {
+			$plugins_dir = wp_normalize_path( WP_PLUGIN_DIR );
+		}
 
 		foreach ( $trace as $frame ) {
 			if ( empty( $frame['file'] ) || ! is_string( $frame['file'] ) ) {

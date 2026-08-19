@@ -45,14 +45,29 @@ final class PlugSeal_Admin_Page {
 	public function __construct() {
 		add_action( 'admin_menu',            [ $this, 'register_menu' ] );
 		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_assets' ] );
+		add_filter( 'plugin_action_links_' . PLUGSEAL_BASENAME, [ $this, 'add_settings_link' ] );
 		add_action( 'admin_init',            [ $this, 'handle_data_form' ] );
 		add_action( 'wp_ajax_plugseal_set_override',    [ $this, 'ajax_set_override' ] );
 		add_action( 'wp_ajax_plugseal_remove_override', [ $this, 'ajax_remove_override' ] );
+		add_action( 'wp_ajax_plugseal_reset_plugin',    [ $this, 'ajax_reset_plugin' ] );
 	}
 
 	/**
-	 * Registers the settings page under the Settings menu.
+	 * Adds a Settings link to the plugin action links.
+	 *
+	 * @param array<string> $links Existing action links.
+	 * @return array<string>
 	 */
+	public function add_settings_link( array $links ): array {
+		$settings_link = sprintf(
+			'<a href="%s">%s</a>',
+			esc_url( admin_url( 'options-general.php?page=' . self::PAGE_SLUG ) ),
+			esc_html__( 'Settings', 'plugseal' )
+		);
+		array_unshift( $links, $settings_link );
+		return $links;
+	}
+
 	public function register_menu(): void {
 		add_options_page(
 			esc_html__( 'PlugSeal', 'plugseal' ),
@@ -95,8 +110,11 @@ final class PlugSeal_Admin_Page {
 				'nonce'   => wp_create_nonce( self::NONCE_ACTION ),
 				'ajaxurl' => admin_url( 'admin-ajax.php' ),
 				'i18n'    => [
-					'allowed' => esc_html__( 'Allowed', 'plugseal' ),
-					'denied'  => esc_html__( 'Denied',  'plugseal' ),
+					'allowed'          => esc_html__( 'Allowed', 'plugseal' ),
+					'denied'           => esc_html__( 'Denied', 'plugseal' ),
+
+					/* translators: %s: plugin name */
+					'reset_confirm'    => esc_html__( 'Reset all permissions for %s to defaults?', 'plugseal' ),
 				],
 			]
 		);
@@ -138,7 +156,7 @@ final class PlugSeal_Admin_Page {
 			wp_die( esc_html__( 'You do not have permission to access this page.', 'plugseal' ) );
 		}
 
-		$active_plugins = $this->get_active_plugin_slugs();
+		$active_plugins = $this->get_active_plugins_data();
 		$overrides      = PlugSeal_Permission_Registry::get_overrides();
 		?>
 		<div class="wrap plugseal-wrap">
@@ -159,14 +177,19 @@ final class PlugSeal_Admin_Page {
 
 				<!-- Plugin list -->
 				<nav class="plugseal-plugin-list" aria-label="<?php esc_attr_e( 'Plugin list', 'plugseal' ); ?>">
-					<?php foreach ( $active_plugins as $slug ) : ?>
+					<?php foreach ( $active_plugins as $plugin_data ) :
+						$slug         = $plugin_data['slug'];
+						$name         = $plugin_data['name'];
+						$denied_count = $this->count_denied_permissions( $slug, $overrides );
+					?>
 						<button
 							class="plugseal-plugin-item"
 							data-slug="<?php echo esc_attr( $slug ); ?>"
+							title="<?php echo esc_attr( $name ); ?>"
 						>
-							<span class="plugseal-plugin-name"><?php echo esc_html( $slug ); ?></span>
-							<?php if ( $this->has_denied_permissions( $slug, $overrides ) ) : ?>
-								<span class="plugseal-badge badge-restricted"><?php esc_html_e( 'restricted', 'plugseal' ); ?></span>
+							<span class="plugseal-plugin-name"><?php echo esc_html( $name ); ?></span>
+							<?php if ( $denied_count > 0 ) : ?>
+								<span class="plugseal-count-badge"><?php echo esc_html( $denied_count ); ?></span>
 							<?php endif; ?>
 						</button>
 					<?php endforeach; ?>
@@ -178,12 +201,28 @@ final class PlugSeal_Admin_Page {
 						<?php esc_html_e( 'Select a plugin to manage its permissions.', 'plugseal' ); ?>
 					</p>
 
-					<?php foreach ( $active_plugins as $slug ) : ?>
+					<?php foreach ( $active_plugins as $plugin_data ) :
+						$slug = $plugin_data['slug'];
+						$name = $plugin_data['name'];
+					?>
 						<div class="plugseal-plugin-detail" data-slug="<?php echo esc_attr( $slug ); ?>" hidden>
-							<h2><?php echo esc_html( $slug ); ?></h2>
+							<div class="plugseal-plugin-detail-header">
+								<h2 tabindex="-1"><?php echo esc_html( $name ); ?></h2>
+								<button
+									class="button plugseal-reset-btn"
+									data-slug="<?php echo esc_attr( $slug ); ?>"
+									title="<?php esc_attr_e( 'Reset all permissions to defaults', 'plugseal' ); ?>"
+								>
+									<?php esc_html_e( 'Reset to defaults', 'plugseal' ); ?>
+								</button>
+							</div>
 							<?php
-							$hook_categories = PlugSeal_Interceptor_Hooks::get_hook_categories();
-							foreach ( PlugSeal_Permission_Registry::PERMISSION_GROUPS as $group_label => $group_perms ) : ?>
+							$hook_categories    = PlugSeal_Interceptor_Hooks::get_hook_categories();
+							$group_labels       = PlugSeal_Permission_Registry::get_group_labels();
+							$perm_descriptions  = PlugSeal_Permission_Registry::get_permission_descriptions();
+							foreach ( PlugSeal_Permission_Registry::PERMISSION_GROUPS as $group_key => $group_perms ) :
+								$group_label = $group_labels[ $group_key ] ?? $group_key;
+							?>
 							<h3 class="plugseal-group-label"><?php echo esc_html( $group_label ); ?></h3>
 							<table class="plugseal-perms-table widefat">
 								<thead>
@@ -204,10 +243,9 @@ final class PlugSeal_Admin_Page {
 											<td>
 												<code><?php echo esc_html( $perm ); ?></code>
 												<?php if ( $hooks_title ) : ?>
-													<span
-														class="plugseal-hooks-hint"
-														title="<?php echo esc_attr( $hooks_title ); ?>"
-													>?</span>
+													<br><span class="plugseal-hooks-desc"><?php echo esc_html( $hooks_title ); ?></span>
+												<?php elseif ( ! empty( $perm_descriptions[ $perm ] ) ) : ?>
+													<br><span class="plugseal-hooks-desc"><?php echo esc_html( $perm_descriptions[ $perm ] ); ?></span>
 												<?php endif; ?>
 											</td>
 											<td>
@@ -216,8 +254,7 @@ final class PlugSeal_Admin_Page {
 													data-slug="<?php echo esc_attr( $slug ); ?>"
 													data-perm="<?php echo esc_attr( $perm ); ?>"
 													data-allowed="<?php echo esc_attr( $allowed ? '1' : '0' ); ?>"
-													aria-label="<?php echo esc_attr( sprintf( /* translators: 1: permission, 2: plugin */ __( 'Toggle %1$s for %2$s', 'plugseal' ), $perm, $slug ) ); ?>"
-												>
+													>
 													<?php echo $allowed ? esc_html__( 'Allowed', 'plugseal' ) : esc_html__( 'Denied', 'plugseal' ); ?>
 												</button>
 											</td>
@@ -248,18 +285,21 @@ final class PlugSeal_Admin_Page {
 			<form method="post" action="">
 				<?php wp_nonce_field( self::NONCE_DATA ); ?>
 				<input type="hidden" name="plugseal_data_form" value="1">
-				<label>
-					<input
-						type="checkbox"
-						name="plugseal_delete_on_uninstall"
-						value="1"
-						<?php checked( $delete_on_uninstall ); ?>
-					>
-					<?php esc_html_e( 'Delete all plugin data on uninstall', 'plugseal' ); ?>
-				</label>
-				<p class="description">
-					<?php esc_html_e( 'If checked, the permission overrides and settings will be permanently deleted when the plugin is uninstalled.', 'plugseal' ); ?>
-				</p>
+				<fieldset>
+					<legend class="screen-reader-text"><?php esc_html_e( 'Data settings', 'plugseal' ); ?></legend>
+					<label>
+						<input
+							type="checkbox"
+							name="plugseal_delete_on_uninstall"
+							value="1"
+							<?php checked( $delete_on_uninstall ); ?>
+						>
+						<?php esc_html_e( 'Delete all plugin data on uninstall', 'plugseal' ); ?>
+					</label>
+					<p class="description">
+						<?php esc_html_e( 'If checked, the permission overrides and settings will be permanently deleted when the plugin is uninstalled.', 'plugseal' ); ?>
+					</p>
+				</fieldset>
 				<?php submit_button( esc_html__( 'Save', 'plugseal' ), 'secondary', 'submit', false ); ?>
 			</form>
 		</section>
@@ -267,13 +307,14 @@ final class PlugSeal_Admin_Page {
 	}
 
 	/**
-	 * Returns the slugs of all active plugins except this one.
+	 * Returns data for all active plugins except this one.
 	 *
-	 * @return string[]
+	 * @return array<string, array{slug: string, name: string, file: string}>
 	 */
-	private function get_active_plugin_slugs(): array {
+	private function get_active_plugins_data(): array {
+		require_once ABSPATH . 'wp-admin/includes/plugin.php';
 		$active  = (array) get_option( 'active_plugins', [] );
-		$slugs   = [];
+		$plugins = [];
 
 		foreach ( $active as $plugin_file ) {
 			if ( ! is_string( $plugin_file ) ) {
@@ -282,34 +323,63 @@ final class PlugSeal_Admin_Page {
 			if ( str_contains( $plugin_file, 'plugseal' ) ) {
 				continue;
 			}
-			$slugs[] = explode( '/', $plugin_file )[0];
+			$slug = explode( '/', $plugin_file )[0];
+			$data = get_plugin_data( WP_PLUGIN_DIR . '/' . $plugin_file, false, false );
+			$name = ! empty( $data['Name'] ) ? $data['Name'] : $slug;
+			$plugins[ $slug ] = [
+				'slug' => $slug,
+				'name' => $name,
+				'file' => $plugin_file,
+			];
 		}
 
-		sort( $slugs );
-		return $slugs;
+		uasort( $plugins, static fn( $a, $b ) => strcmp( $a['name'], $b['name'] ) );
+		return $plugins;
 	}
 
 	/**
-	 * Returns true if a plugin has at least one denied permission.
+	 * Returns the number of denied permissions for a plugin.
 	 *
-	 * @param string                          $slug      Plugin slug.
+	 * @param string                             $slug      Plugin slug.
 	 * @param array<string, array<string, bool>> $overrides All overrides.
 	 */
-	private function has_denied_permissions( string $slug, array $overrides ): bool {
+	private function count_denied_permissions( string $slug, array $overrides ): int {
 		if ( ! isset( $overrides[ $slug ] ) ) {
-			return false;
+			return 0;
 		}
+		$count = 0;
 		foreach ( $overrides[ $slug ] as $value ) {
 			if ( false === $value || '0' === (string) $value ) {
-				return true;
+				++$count;
 			}
 		}
-		return false;
+		return $count;
 	}
 
 	// -------------------------------------------------------------------------
 	// AJAX handlers
 	// -------------------------------------------------------------------------
+
+	/**
+	 * Handles the reset_plugin AJAX action.
+	 */
+	public function ajax_reset_plugin(): void {
+		check_ajax_referer( self::NONCE_ACTION, 'nonce' );
+
+		if ( ! current_user_can( self::CAPABILITY ) ) {
+			wp_send_json_error( [ 'message' => __( 'Insufficient permissions.', 'plugseal' ) ], 403 );
+		}
+
+		$slug = sanitize_key( wp_unslash( $_POST['slug'] ?? '' ) );
+
+		if ( '' === $slug ) {
+			wp_send_json_error( [ 'message' => __( 'Invalid parameters.', 'plugseal' ) ], 400 );
+		}
+
+		PlugSeal_Permission_Registry::remove_all_overrides( $slug );
+
+		wp_send_json_success();
+	}
 
 	/**
 	 * Handles the set_override AJAX action.

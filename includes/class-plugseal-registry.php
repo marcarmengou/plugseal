@@ -99,12 +99,66 @@ final class PlugSeal_Permission_Registry {
 		'Rewrite'           => [ 'rewrite:register' ],
 		'Dashboard'         => [ 'dashboard:widget' ],
 		'Admin'             => [ 'admin:menu' ],
-		'Hooks — Frontend'  => [ 'hooks:frontend' ],
-		'Hooks — Admin'     => [ 'hooks:admin' ],
-		'Hooks — Auth'      => [ 'hooks:auth' ],
-		'Hooks — Content'   => [ 'hooks:content' ],
-		'Hooks — Lifecycle' => [ 'hooks:lifecycle' ],
+		'Frontend Hooks'    => [ 'hooks:frontend' ],
+		'Admin Hooks'       => [ 'hooks:admin' ],
+		'Auth Hooks'        => [ 'hooks:auth' ],
+		'Content Hooks'     => [ 'hooks:content' ],
+		'Lifecycle Hooks'   => [ 'hooks:lifecycle' ],
 	];
+
+	/**
+	 * Returns translated permission descriptions.
+	 *
+	 * @return array<string, string>
+	 */
+	public static function get_permission_descriptions(): array {
+		return [
+			'db:read'            => __( 'Read data from the database.', 'plugseal' ),
+			'db:write'           => __( 'Write or delete data in the database.', 'plugseal' ),
+			'db:read:users'      => __( 'Read user accounts and profile data.', 'plugseal' ),
+			'db:write:users'     => __( 'Modify or delete user accounts.', 'plugseal' ),
+			'http:outbound'      => __( 'Send requests to external servers.', 'plugseal' ),
+			'options:read'       => __( 'Read settings stored in the database.', 'plugseal' ),
+			'options:write'      => __( 'Save or delete settings in the database.', 'plugseal' ),
+			'email:send'         => __( 'Send emails to any address.', 'plugseal' ),
+			'cron:write'         => __( 'Schedule background tasks.', 'plugseal' ),
+			'transients:write'   => __( 'Store temporary data in the cache.', 'plugseal' ),
+			'users:create'       => __( 'Create new user accounts.', 'plugseal' ),
+			'rest:register'      => __( 'Register public REST API endpoints.', 'plugseal' ),
+			'shortcode:register' => __( 'Register shortcodes for use in content.', 'plugseal' ),
+			'rewrite:register'   => __( 'Add custom URL rules to the site.', 'plugseal' ),
+			'admin:menu'         => __( 'Add pages to the admin navigation menu.', 'plugseal' ),
+			'dashboard:widget'   => __( 'Add widgets to the admin dashboard.', 'plugseal' ),
+		];
+	}
+
+	/**
+	 * Returns translated group labels.
+	 * Cannot use __() in constants, so we use a method instead.
+	 *
+	 * @return array<string, string>
+	 */
+	public static function get_group_labels(): array {
+		return [
+			'Database'          => __( 'Database', 'plugseal' ),
+			'HTTP'              => __( 'HTTP', 'plugseal' ),
+			'Options'           => __( 'Options', 'plugseal' ),
+			'Email'             => __( 'Email', 'plugseal' ),
+			'Cron'              => __( 'Cron', 'plugseal' ),
+			'Transients'        => __( 'Transients', 'plugseal' ),
+			'Users'             => __( 'Users', 'plugseal' ),
+			'REST API'          => __( 'REST API', 'plugseal' ),
+			'Shortcodes'        => __( 'Shortcodes', 'plugseal' ),
+			'Rewrite'           => __( 'Rewrite', 'plugseal' ),
+			'Dashboard'         => __( 'Dashboard', 'plugseal' ),
+			'Admin'             => __( 'Admin', 'plugseal' ),
+			'Frontend Hooks'    => __( 'Frontend Hooks', 'plugseal' ),
+			'Admin Hooks'       => __( 'Admin Hooks', 'plugseal' ),
+			'Auth Hooks'        => __( 'Auth Hooks', 'plugseal' ),
+			'Content Hooks'     => __( 'Content Hooks', 'plugseal' ),
+			'Lifecycle Hooks'   => __( 'Lifecycle Hooks', 'plugseal' ),
+		];
+	}
 
 	/**
 	 * Option key for admin overrides.
@@ -168,6 +222,18 @@ final class PlugSeal_Permission_Registry {
 			unset( $overrides[ $slug ] );
 		}
 
+		update_option( self::OPTION_OVERRIDES, $overrides );
+		self::$overrides = $overrides;
+	}
+
+	/**
+	 * Removes all admin overrides for a plugin, restoring all defaults.
+	 *
+	 * @param string $slug Plugin slug.
+	 */
+	public static function remove_all_overrides( string $slug ): void {
+		$overrides = self::get_overrides();
+		unset( $overrides[ $slug ] );
 		update_option( self::OPTION_OVERRIDES, $overrides );
 		self::$overrides = $overrides;
 	}

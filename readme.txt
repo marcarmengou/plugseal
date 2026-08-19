@@ -2,9 +2,9 @@
 Contributors: marc4
 Tags: security, permissions, hardening, access-control
 Requires at least: 6.6
-Tested up to: 7.0
+Tested up to: 7.1
 Requires PHP: 8.2
-Stable tag: 0.1.0
+Stable tag: 0.3.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -23,7 +23,7 @@ PlugSeal gives administrators granular control over what each active plugin is a
 * `email:send` — sending email via wp_mail()
 * `cron:write` — scheduling events via wp_schedule_event()
 * `transients:write` — writing transients via set_transient()
-* `users:create` — creating users via wp_create_user() (updates and deletes are covered by db:write:users)
+* `users:create` — creating users via wp_create_user() (deletes are covered by db:write:users)
 * `rest:register` — registering REST API endpoints via register_rest_route()
 * `shortcode:register` — registering shortcodes via add_shortcode()
 * `rewrite:register` — registering rewrite rules via add_rewrite_rule()
@@ -66,6 +66,33 @@ Data is preserved by default. To delete all data on uninstall, enable the option
 Yes, if a plugin makes direct database connections or filesystem calls without using WordPress APIs, or if WordPress core processes actions on its behalf. These are known limitations documented above.
 
 == Changelog ==
+
+= 0.3.0 - 2025-06-13 =
+* Plugin names are now shown in the sidebar.
+* Long plugin names are truncated with ellipsis; full name visible on hover.
+* Plugins in the sidebar are now sorted alphabetically by name.
+* Sidebar width increased to 280px and now stays fixed while scrolling through permissions.
+* Replaced text badge with a compact round count badge that adapts to the admin colour scheme.
+* Reset confirmation now shows the plugin name.
+* Fixed duplicate JavaScript block in reset handler.
+* Fixed CSS inconsistencies and removed unused rules.
+* Improved accessibility: busy states during AJAX requests and keyboard focus management.
+
+= 0.2.1 - 2025-06-13 =
+* Performance: cache WP_PLUGIN_DIR normalisation across calls.
+* Fixed: orphaned permission overrides are now removed when a plugin is deleted.
+* Code: removed unused global variables.
+* Code: fixed duplicate docblock.
+* Code: fixed inconsistent alignment in permission groups.
+* Code: updated outdated file header comment.
+
+= 0.2.0 - 2025-05-30 =
+* Added "Reset to defaults" button per plugin.
+* Added Settings link to the plugin list page.
+* Added descriptions for all permissions.
+* Renamed hook categories.
+* Improved translation support.
+* Fixed untranslated strings in JavaScript.
 
 = 0.1.0 - 2025-04-25 =
 * Initial release.

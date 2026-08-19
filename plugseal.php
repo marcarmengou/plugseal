@@ -3,9 +3,9 @@
  * Plugin Name: PlugSeal
  * Plugin URI: https://wordpress.org/plugins/plugseal/
  * Description: Control what each active plugin is allowed to do. Allow or deny specific permissions per plugin, with immediate effect.
- * Version: 0.1.0
+ * Version: 0.3.0
  * Requires at least: 6.6
- * Tested up to: 7.0
+ * Tested up to: 7.1
  * Requires PHP: 8.2
  * Author: Marc Armengou
  * Author URI: https://www.marcarmengou.com/
@@ -19,12 +19,13 @@ declare( strict_types=1 );
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'PLUGSEAL_VERSION',  '0.1.0' );
+define( 'PLUGSEAL_VERSION',  '0.3.0' );
 define( 'PLUGSEAL_DIR',      plugin_dir_path( __FILE__ ) );
 define( 'PLUGSEAL_URL',      plugin_dir_url( __FILE__ ) );
 define( 'PLUGSEAL_BASENAME', plugin_basename( __FILE__ ) );
 
-// Core classes — helper must load before interceptors.
+// Core classes — extended interceptors must load before DB and HTTP
+// because they define PlugSeal_Interceptor_Helper used by all interceptors.
 require_once PLUGSEAL_DIR . 'includes/class-plugseal-registry.php';
 require_once PLUGSEAL_DIR . 'includes/class-interceptors-extended.php';
 require_once PLUGSEAL_DIR . 'includes/class-interceptor-hooks.php';
@@ -74,12 +75,13 @@ final class PlugSeal {
 		if ( is_admin() ) {
 			new PlugSeal_Admin_Page();
 		}
+
+		// Remove overrides when a plugin is deleted.
+		add_action( 'delete_plugin', static function ( string $plugin_file ): void {
+			$slug = explode( '/', $plugin_file )[0];
+			PlugSeal_Permission_Registry::remove_all_overrides( $slug );
+		} );
 	}
 }
-
-function plugseal_activate(): void {
-	// Intentionally empty. Options are created on first save.
-}
-register_activation_hook( __FILE__, 'plugseal_activate' );
 
 PlugSeal::instance();
